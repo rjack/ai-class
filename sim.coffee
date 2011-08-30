@@ -64,20 +64,15 @@ class Dirt extends Thing
 class Agent extends Thing
 
 class ReflexAgent extends Agent
-    constructor: (@name) ->
+    constructor: (@name, @agent_program) ->
         @percepts = []
         super()
 
     update: (verbose=false) ->
         dirt = @dirt_sensor.read()
         location = @location_sensor.read()
-        percepts.push "#{location} - #{dirt}"
-        @select_action
-
-    select_action: ->
-        # TODO
-
-
+        @percepts.push "#{location} - #{dirt}"
+        @agent_program @percepts
 
 
 #

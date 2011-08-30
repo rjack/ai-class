@@ -2,6 +2,7 @@ util = require 'util'
 
 class Environment
     constructor: (@name, @width, @height) ->
+        @available_id = 0
         @step = 0
         @cells = ([] for i in [0..@width * @height - 1])
         @things = []
@@ -9,8 +10,17 @@ class Environment
     get_index: (x, y) ->
         x + (@width * y)
 
+    get_coords: (index) ->
+        x = index % @width
+        y = Math.floor index / @width
+        [x, y]
+
+    generate_id: ->
+        ++@available_id
+
 
     add_thing: (thing, x, y) ->
+        thing.id = @generate_id()
         if (x < 0 || x > @width || y < 0 || y > @height)
             throw "add_thing error: #{thing} coordinates (#{x},#{y}) out of
  bounds (width = #{@width}, height = #{@height})"
@@ -24,8 +34,31 @@ class Environment
     update: (verbose=false) ->
         @step++
         for thing in @things
-            thing.update(verbose)
-        console.log @toString() if verbose
+            action = thing.update(verbose)
+            if action?
+                switch action
+                    when 'suck' then
+                    when 'left'
+                        move = -1
+                    when 'right'
+                        move = 1
+                    when 'up'
+                        move = -@width
+                    when 'down'
+                        move = +@width
+                    else
+                        throw "#{@name}#update error: #{thing.name} invalid action #{action}"
+
+                if move?
+                    i = @get_index thing.x, thing.y
+                    @cells[i] = @cells[i].filter (existing_thing) ->
+                        existing_thing.id is not thing.id
+                    i += move
+                    @cells[i].push(thing)
+                [thing.x, thing.y] = @get_coords i
+
+
+        console.info @toString() if verbose
         this
 
     toString: ->
@@ -46,17 +79,16 @@ class Thing
         this
 
     update: (verbose=false) ->
-        this
 
     toString: ->
-        "Thing #{@name}: position #{@x}, #{@y}"
+        "Thing #{@name}-#{@id}: position #{@x}, #{@y}"
 
 
 # An obstacle is the only Thing that can stay at a given x,y position
 class Obstacle extends Thing
     constructor: (@name) ->
         @blocks = true
-        super()
+        super(@name)
 
 
 class Dirt extends Thing
@@ -66,24 +98,35 @@ class Agent extends Thing
 class ReflexAgent extends Agent
     constructor: (@name, @agent_program) ->
         @percepts = []
-        super()
+        super(@name)
 
     update: (verbose=false) ->
-        dirt = @dirt_sensor.read()
-        location = @location_sensor.read()
+        dirt = 'clean'       #@dirt_sensor.read()
+        location = "#{@x},#{@y}"     #@location_sensor.read()
         @percepts.push "#{location} - #{dirt}"
-        @agent_program @percepts
+        action = @agent_program @percepts
+        console.info "ReflexAgent #{@name}, percepts: #{@percepts}, action: #{action}"
+        action
 
 
 #
 # Example use
 #
 
-rumba = new Agent 'rumba'
-dirt = new Dirt 'dirt'
+rumba = new ReflexAgent 'rumba', (percepts) ->
+    last = percepts[percepts.length - 1]
+    switch last
+        when '0,0 - dirt' then 'suck'
+        when '0,0 - clean' then 'right'
+        when '1,0 - dirt' then 'suck'
+        when '1,0 - clean' then 'left'
+        else throw "error, don't know what to do on #{last}"
+
+
+#dirt = new Dirt 'dirt'
 room = new Environment('my room', 2, 1)
                       .add_thing(rumba, 0, 0)
-                      .add_thing(dirt, 1, 0)
+#                      .add_thing(dirt, 1, 0)
 
 steps = 10
 room.update(true) while steps--

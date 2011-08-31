@@ -57,7 +57,7 @@ class Environment
                         existing_thing.id is not thing.id
                     i += move
                     @cells[i].push(thing)
-                [thing.x, thing.y] = @get_coords i
+                    [thing.x, thing.y] = @get_coords i
 
 
         console.info @toString() if verbose

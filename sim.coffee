@@ -105,14 +105,14 @@ class ReflexAgent extends Agent
         location = "#{@x},#{@y}"     #@location_sensor.read()
         @percepts.push "#{location} - #{dirt}"
         action = @agent_program @percepts
-        console.info "ReflexAgent #{@name}, percepts: #{@percepts}, action: #{action}"
+        if verbose
+            console.info "ReflexAgent #{@name}, percepts: #{@percepts[@percepts.length-1]}, action: #{action}"
         action
 
 
 #
 # Example use
 #
-
 rumba = new ReflexAgent 'rumba', (percepts) ->
     last = percepts[percepts.length - 1]
     switch last

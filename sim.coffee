@@ -1,4 +1,6 @@
 util = require 'util'
+rl = require('readline').createInterface process.stdin, process.stdout
+
 
 class Environment
     constructor: (@name, @width, @height) ->
@@ -123,10 +125,26 @@ rumba = new ReflexAgent 'rumba', (percepts) ->
         else throw "error, don't know what to do on #{last}"
 
 
-#dirt = new Dirt 'dirt'
+dirt = new Dirt 'dirt'
 room = new Environment('my room', 2, 1)
                       .add_thing(rumba, 0, 0)
-#                      .add_thing(dirt, 1, 0)
+                      .add_thing(dirt, 1, 0)
 
-steps = 10
-room.update(true) while steps--
+#
+# User prompt
+#
+prompt = 'sim> '
+
+rl.on 'line', (line) ->
+    room.update true
+    rl.setPrompt prompt, prompt.length
+    rl.prompt()
+
+rl.on 'close', ->
+    console.info 'So long, and thanks for all the fish'
+    process.exit 0
+
+console.info 'AIMA Simulator'
+rl.setPrompt prompt, prompt.length
+rl.prompt()
+

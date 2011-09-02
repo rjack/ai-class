@@ -93,20 +93,33 @@ class Obstacle extends Thing
         super(@name)
 
 
+class DirtSensor
+    constructor: (@environment) ->
+
+    install: (@agent) ->
+
+    read: ->
+        @environment.
+
+
 class Dirt extends Thing
 
 class Agent extends Thing
 
 class ReflexAgent extends Agent
-    constructor: (@name, @agent_program) ->
+    constructor: (@name, @agent_program, @sensors) ->
         @percepts = []
         super(@name)
 
-    update: (verbose=false) ->
-        dirt = 'clean'       #@dirt_sensor.read()
-        location = "#{@x},#{@y}"     #@location_sensor.read()
+    update_percepts: ->
+        dirt = @sensors.dirt.read()
+        location = @sensors.location.read()
         @percepts.push "#{location} - #{dirt}"
+
+    update: (verbose=false) ->
+        @update_percepts()
         action = @agent_program @percepts
+
         if verbose
             console.info "ReflexAgent #{@name}, percepts: #{@percepts[@percepts.length-1]}, action: #{action}"
         action
@@ -116,13 +129,14 @@ class ReflexAgent extends Agent
 # Example use
 #
 rumba = new ReflexAgent 'rumba', (percepts) ->
-    last = percepts[percepts.length - 1]
-    switch last
+    # decide what to do based on last percept
+    percept = percepts[percepts.last - 1]
+    switch percept
         when '0,0 - dirt' then 'suck'
         when '0,0 - clean' then 'right'
         when '1,0 - dirt' then 'suck'
         when '1,0 - clean' then 'left'
-        else throw "error, don't know what to do on #{last}"
+        else throw "error, don't know what to do on #{percept}"
 
 
 dirt = new Dirt 'dirt'
@@ -147,4 +161,3 @@ rl.on 'close', ->
 console.info 'AIMA Simulator'
 rl.setPrompt prompt, prompt.length
 rl.prompt()
-

@@ -29,9 +29,20 @@ class Environment
         i = @get_index(x, y)
         @cells[i].push thing
         thing.set_position x, y
-        @things.push thing
+        @things.push thing    # TODO: make @things an hash indexed by thing.id
         this
 
+    get_location_sensor: (agent) ->
+        ->
+            [agent.x, agent.y]
+
+    get_dirt_sensor: (agent) ->
+        =>
+            i = @get_index agent.x, agent.y
+            if (@cells[i].some (thing) -> thing instanceof Dirt)
+                'dirt'
+            else
+                'clean'
 
     update: (verbose=false) ->
         @step++
@@ -93,27 +104,21 @@ class Obstacle extends Thing
         super(@name)
 
 
-class DirtSensor
-    constructor: (@environment) ->
-
-    install: (@agent) ->
-
-    read: ->
-        @environment.
-
-
 class Dirt extends Thing
 
 class Agent extends Thing
+    set_sensors: (@sensors) ->
+
+    # TODO pull up methods `update_percepts' and `update'
 
 class ReflexAgent extends Agent
-    constructor: (@name, @agent_program, @sensors) ->
+    constructor: (@name, @agent_program) ->
         @percepts = []
         super(@name)
 
     update_percepts: ->
-        dirt = @sensors.dirt.read()
-        location = @sensors.location.read()
+        dirt = @sensors.dirt()
+        location = @sensors.location()
         @percepts.push "#{location} - #{dirt}"
 
     update: (verbose=false) ->
@@ -128,9 +133,12 @@ class ReflexAgent extends Agent
 #
 # Example use
 #
+
+room = new Environment 'my room', 2, 1
+
 rumba = new ReflexAgent 'rumba', (percepts) ->
     # decide what to do based on last percept
-    percept = percepts[percepts.last - 1]
+    percept = percepts[percepts.length - 1]
     switch percept
         when '0,0 - dirt' then 'suck'
         when '0,0 - clean' then 'right'
@@ -138,11 +146,15 @@ rumba = new ReflexAgent 'rumba', (percepts) ->
         when '1,0 - clean' then 'left'
         else throw "error, don't know what to do on #{percept}"
 
+rumba.set_sensors
+    dirt: room.get_dirt_sensor rumba
+    location: room.get_location_sensor rumba
+
 
 dirt = new Dirt 'dirt'
-room = new Environment('my room', 2, 1)
-                      .add_thing(rumba, 0, 0)
-                      .add_thing(dirt, 1, 0)
+
+room.add_thing rumba, 0, 0
+room.add_thing dirt, 1, 0
 
 #
 # User prompt

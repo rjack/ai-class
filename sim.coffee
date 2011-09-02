@@ -50,7 +50,10 @@ class Environment
             action = thing.update(verbose)
             if action?
                 switch action
-                    when 'suck' then
+                    when 'suck'
+                        i = @get_index thing.x, thing.y
+                        @cells[i] = @cells[i].filter (something) ->
+                            something not instanceof Dirt
                     when 'left'
                         move = -1
                     when 'right'

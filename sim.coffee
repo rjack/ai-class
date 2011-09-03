@@ -174,5 +174,7 @@ rl.on 'close', ->
     process.exit 0
 
 console.info 'AIMA Simulator'
+console.info room.toString()
+
 rl.setPrompt prompt, prompt.length
 rl.prompt()

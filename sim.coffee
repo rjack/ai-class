@@ -32,6 +32,13 @@ class Environment
         @things[thing.id] = thing
         this
 
+    del_thing: (thing) ->
+        delete @things[thing.id]
+        i = @get_index thing.x, thing.y
+        @cells[i] = @cells[i].filter (something) ->
+            something.id is not thing.id
+
+
     get_location_sensor: (agent) ->
         ->
             [agent.x, agent.y]
@@ -52,8 +59,9 @@ class Environment
                 switch action
                     when 'suck'
                         i = @get_index thing.x, thing.y
-                        @cells[i] = @cells[i].filter (something) ->
-                            something not instanceof Dirt
+                        for something in @cells[i]
+                            if something instanceof Dirt
+                                @del_thing something
                     when 'left'
                         move = -1
                     when 'right'
@@ -67,8 +75,8 @@ class Environment
 
                 if move?
                     i = @get_index thing.x, thing.y
-                    @cells[i] = @cells[i].filter (existing_thing) ->
-                        existing_thing.id is not thing.id
+                    @cells[i] = @cells[i].filter (something) ->
+                        something.id is not thing.id
                     i += move
                     @cells[i].push(thing)
                     [thing.x, thing.y] = @get_coords i

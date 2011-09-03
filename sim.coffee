@@ -139,7 +139,7 @@ class ReflexAgent extends Agent
 
 room = new Environment 'my room', 2, 1
 
-rumba = new ReflexAgent 'rumba', (percepts) ->
+reemba = new ReflexAgent 'reemba', (percepts) ->
     # decide what to do based on last percept
     percept = percepts[percepts.length - 1]
     switch percept
@@ -149,14 +149,14 @@ rumba = new ReflexAgent 'rumba', (percepts) ->
         when '1,0 - clean' then 'left'
         else throw "error, don't know what to do on #{percept}"
 
-rumba.set_sensors
-    dirt: room.get_dirt_sensor rumba
-    location: room.get_location_sensor rumba
+reemba.set_sensors
+    dirt: room.get_dirt_sensor reemba
+    location: room.get_location_sensor reemba
 
 
 dirt = new Dirt 'dirt'
 
-room.add_thing rumba, 0, 0
+room.add_thing reemba, 0, 0
 room.add_thing dirt, 1, 0
 
 #

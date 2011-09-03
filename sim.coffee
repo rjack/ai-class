@@ -7,7 +7,7 @@ class Environment
         @available_id = 0
         @step = 0
         @cells = ([] for i in [0..@width * @height - 1])
-        @things = []
+        @things = {}
 
     get_index: (x, y) ->
         x + (@width * y)
@@ -29,7 +29,7 @@ class Environment
         i = @get_index(x, y)
         @cells[i].push thing
         thing.set_position x, y
-        @things.push thing    # TODO: make @things an hash indexed by thing.id
+        @things[thing.id] = thing
         this
 
     get_location_sensor: (agent) ->
@@ -46,8 +46,8 @@ class Environment
 
     update: (verbose=false) ->
         @step++
-        for thing in @things
-            action = thing.update(verbose)
+        for id, thing of @things
+            action = thing.update verbose
             if action?
                 switch action
                     when 'suck'
@@ -78,11 +78,10 @@ class Environment
         this
 
     toString: ->
-        things_listing = @things.reduce ((str, thing) ->
-            prefix = ""
-            prefix = "#{str}\n" if str
-            "#{prefix}#{thing.toString()}"), ''
-        "Environment #{@name}: step #{@step}\n#{things_listing}"
+        list = for key, thing of @things
+            thing.toString()
+
+        "Environment #{@name}: step #{@step}\n#{list.join '\n'}"
 
 
 

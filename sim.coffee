@@ -6,47 +6,56 @@ class Environment
     constructor: (@name, @width, @height) ->
         @available_id = 0
         @step = 0
-        @cells = ([] for i in [0..@width * @height - 1])
         @things = {}
-
-    get_index: (x, y) ->
-        x + (@width * y)
-
-    get_coords: (index) ->
-        x = index % @width
-        y = Math.floor index / @width
-        [x, y]
+        @cells = []
+        for x in [0..@width-1]
+            @cells[x] = []
+            for y in [0..@height-1]
+                @cells[x][y] = []
+                if x is 0 or x is @width-1 or y is 0 or y is @height-1
+                    @add_thing(new Obstacle 'wall', x, y)
 
     generate_id: ->
         ++@available_id
 
 
+    get_coords: (thing) ->
+        x = @things[thing.id].x
+        y = @things[thing.id].y
+        [x, y]
+
+
     add_thing: (thing, x, y) ->
         thing.id = @generate_id()
-        if (x < 0 || x > @width || y < 0 || y > @height)
+        if (x < 0 || x >= @width || y < 0 || y >= @height)
             throw "add_thing error: #{thing} coordinates (#{x},#{y}) out of
  bounds (width = #{@width}, height = #{@height})"
-        i = @get_index(x, y)
-        @cells[i].push thing
-        thing.set_position x, y
-        @things[thing.id] = thing
+        @cells[x][y].push thing
+        @things[thing.id] = thing: thing
+                            x: x
+                            y: y
         this
+
+    move_thing: (thing, x, y) ->
+        @del_thing thing
+        @add_thing thing, x, y
+
 
     del_thing: (thing) ->
         delete @things[thing.id]
-        i = @get_index thing.x, thing.y
-        @cells[i] = @cells[i].filter (something) ->
+        [x, y] = @get_coords thing
+        @cells[x][y] = @cells[x][y].filter (something) ->
             something.id is not thing.id
 
 
     get_location_sensor: (agent) ->
         ->
-            [agent.x, agent.y]
+            @get_coords agent
 
     get_dirt_sensor: (agent) ->
         =>
-            i = @get_index agent.x, agent.y
-            if (@cells[i].some (thing) -> thing instanceof Dirt)
+            [x, y] = @get_coords agent
+            if (@cells[x][y].some (thing) -> thing instanceof Dirt)
                 'dirt'
             else
                 'clean'
@@ -54,32 +63,28 @@ class Environment
     update: (verbose=false) ->
         @step++
         for id, thing of @things
-            action = thing.update verbose
-            if action?
-                switch action
-                    when 'suck'
-                        i = @get_index thing.x, thing.y
-                        for something in @cells[i]
-                            if something instanceof Dirt
-                                @del_thing something
-                    when 'left'
-                        move = -1
-                    when 'right'
-                        move = 1
-                    when 'up'
-                        move = -@width
-                    when 'down'
-                        move = +@width
-                    else
-                        throw "#{@name}#update error: #{thing.name} invalid action #{action}"
-
-                if move?
-                    i = @get_index thing.x, thing.y
-                    @cells[i] = @cells[i].filter (something) ->
-                        something.id is not thing.id
-                    i += move
-                    @cells[i].push(thing)
-                    [thing.x, thing.y] = @get_coords i
+            [verb, complement] = thing.update verbose
+            [x, y] = @get_coords thing
+            switch verb
+                when 'move'
+                    switch complement
+                        when 'left'
+                            move = x--
+                        when 'right'
+                            move = x++
+                        when 'up'
+                            move = y--
+                        when 'down'
+                            move = y++
+                        else
+                            throw "#{@name}#update error: #{thing.name} invalid direction #{complement}"
+                    move_thing thing, x, y
+                when 'suck'
+                    for something in @cells[x][y]
+                        if something instanceof Dirt
+                            @del_thing something
+                else
+                    throw "#{@name}#update error: #{thing.name} invalid direction #{complement}"
 
 
         console.info @toString() if verbose
@@ -96,15 +101,10 @@ class Environment
 class Thing
     constructor: (@name) ->
 
-    set_position: (x, y) ->
-        @x = x
-        @y = y
-        this
-
     update: (verbose=false) ->
 
     toString: ->
-        "Thing #{@name}-#{@id}: position #{@x}, #{@y}"
+        "Thing #{@name}-#{@id}"
 
 
 # An obstacle is the only Thing that can stay at a given x,y position
@@ -151,13 +151,16 @@ class ReflexAgent extends Agent
 room = new Environment 'my room', 5, 5
 
 reemba = new ReflexAgent 'reemba', (percepts) ->
-    i = percepts.length - 1
-    if percepts[i].dirt is 'dirt'
-        'suck'
 
+    actions = [
+        ['move', 'left']
+        ['move', 'right']
+        ['move', 'up']
+        ['move', 'down']
+    ]
 
-
-    else throw "error, don't know what to do on #{percept}"
+    i = Math.floor(Math.random() * 100) % actions.length
+    actions[i]
 
 reemba.set_sensors
     dirt: room.get_dirt_sensor reemba

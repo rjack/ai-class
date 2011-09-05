@@ -128,8 +128,12 @@ class ReflexAgent extends Agent
 
     update_percepts: ->
         dirt = @sensors.dirt()
-        location = @sensors.location()
-        @percepts.push "#{location} - #{dirt}"
+        [x, y] = @sensors.location()
+        @percepts.push
+            location:
+                x: x
+                y: y
+            dirt: dirt
 
     update: (verbose=false) ->
         @update_percepts()
@@ -144,17 +148,16 @@ class ReflexAgent extends Agent
 # Example use
 #
 
-room = new Environment 'my room', 2, 1
+room = new Environment 'my room', 5, 5
 
 reemba = new ReflexAgent 'reemba', (percepts) ->
-    # decide what to do based on last percept
-    percept = percepts[percepts.length - 1]
-    switch percept
-        when '0,0 - dirt' then 'suck'
-        when '0,0 - clean' then 'right'
-        when '1,0 - dirt' then 'suck'
-        when '1,0 - clean' then 'left'
-        else throw "error, don't know what to do on #{percept}"
+    i = percepts.length - 1
+    if percepts[i].dirt is 'dirt'
+        'suck'
+
+
+
+    else throw "error, don't know what to do on #{percept}"
 
 reemba.set_sensors
     dirt: room.get_dirt_sensor reemba

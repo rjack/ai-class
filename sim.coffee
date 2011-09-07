@@ -13,7 +13,7 @@ class Environment
             for y in [0..@height-1]
                 @cells[x][y] = []
                 if x is 0 or x is @width-1 or y is 0 or y is @height-1
-                    @add_thing(new Obstacle 'wall', x, y)
+                    @add_thing new Obstacle('wall'), x, y
 
     generate_id: ->
         ++@available_id
@@ -31,9 +31,7 @@ class Environment
             throw "add_thing error: #{thing} coordinates (#{x},#{y}) out of
  bounds (width = #{@width}, height = #{@height})"
         @cells[x][y].push thing
-        @things[thing.id] = thing: thing
-                            x: x
-                            y: y
+        @things[thing.id] = thing: thing, x: x, y: y
         this
 
     move_thing: (thing, x, y) ->

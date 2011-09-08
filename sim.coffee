@@ -43,7 +43,7 @@ class Environment
         [x, y] = @get_coords thing
         delete @things[thing.id]
         @cells[x][y] = @cells[x][y].filter (something) ->
-            something.id is not thing.id
+            something.id isnt thing.id
 
 
     get_location_sensor: (agent) ->
@@ -60,10 +60,11 @@ class Environment
 
     update: (verbose=false) ->
         @step++
-        for id, thing of @things
+        for id, entry of @things
+            {thing, x, y} = entry
             [verb, complement] = thing.update verbose
-            [x, y] = @get_coords thing
             switch verb
+                when 'nothing' then
                 when 'move'
                     switch complement
                         when 'left'
@@ -76,7 +77,7 @@ class Environment
                             move = y++
                         else
                             throw "#{@name}#update error: #{thing.name} invalid direction #{complement}"
-                    move_thing thing, x, y
+                    @move_thing thing, x, y
                 when 'suck'
                     for something in @cells[x][y]
                         if something instanceof Dirt
@@ -89,8 +90,8 @@ class Environment
         this
 
     toString: ->
-        list = for key, thing of @things
-            thing.toString()
+        list = for key, entry of @things
+            entry.thing.toString()
 
         "Environment #{@name}: step #{@step}\n#{list.join '\n'}"
 
@@ -100,6 +101,7 @@ class Thing
     constructor: (@name) ->
 
     update: (verbose=false) ->
+        ['nothing', 'nothing']
 
     toString: ->
         "Thing #{@name}-#{@id}"
@@ -107,10 +109,6 @@ class Thing
 
 # An obstacle is the only Thing that can stay at a given x,y position
 class Obstacle extends Thing
-    constructor: (@name) ->
-        @blocks = true
-        super(@name)
-
 
 class Dirt extends Thing
 
@@ -136,9 +134,10 @@ class ReflexAgent extends Agent
     update: (verbose=false) ->
         @update_percepts()
         action = @agent_program @percepts
+        {location: {x, y}, dirt} = @percepts[@percepts.length - 1]
 
         if verbose
-            console.info "ReflexAgent #{@name}, percepts: #{@percepts[@percepts.length-1]}, action: #{action}"
+            console.info "ReflexAgent #{@name}, percepts: x=#{x}, y=#{y}, dirt=#{dirt} => action: #{action}"
         action
 
 

@@ -142,11 +142,13 @@ class ReflexAgent extends Agent
     update_percepts: ->
         dirt = @sensors.dirt()
         [x, y] = @sensors.location()
+        obstacles = @sensors.obstacles()
         @percepts.push
             location:
                 x: x
                 y: y
             dirt: dirt
+            obstacles: obstacles
 
     update: (verbose=false) ->
         @update_percepts()
@@ -167,20 +169,17 @@ reemba = new ReflexAgent 'reemba', (percepts) ->
 
     moves = ['up', 'down', 'left', 'right']
 
-    {location: {x, y}, dirt} = percepts[percepts.length - 1]
+    {
+        location: { x, y },
+        dirt,
+        obstacles
+    } = percepts[percepts.length - 1]
 
-    console.log 'percepts', x, y, dirt
+    console.log 'percepts', x, y, dirt, obstacles
     if dirt is 'dirt'
         ['suck', '']
     else
-        if x is 1
-            moves = moves.filter (el) -> el isnt 'left'
-        if x is 3
-            moves = moves.filter (el) -> el isnt 'right'
-        if y is 1
-            moves = moves.filter (el) -> el isnt 'up'
-        if y is 3
-            moves = moves.filter (el) -> el isnt 'down'
+        moves = moves.filter (el) -> not (el in obstacles)
         i = Math.floor(Math.random() * 100) % moves.length
         action = ['move', moves[i]]
         console.log action
@@ -189,6 +188,7 @@ reemba = new ReflexAgent 'reemba', (percepts) ->
 reemba.set_sensors
     dirt: room.get_dirt_sensor reemba
     location: room.get_location_sensor reemba
+    obstacles: room.get_obstacle_sensor reemba
 
 
 dirt = new Dirt 'dirt'

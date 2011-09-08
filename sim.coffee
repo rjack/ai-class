@@ -40,8 +40,8 @@ class Environment
 
 
     del_thing: (thing) ->
-        delete @things[thing.id]
         [x, y] = @get_coords thing
+        delete @things[thing.id]
         @cells[x][y] = @cells[x][y].filter (something) ->
             something.id is not thing.id
 

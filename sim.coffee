@@ -134,10 +134,9 @@ class ReflexAgent extends Agent
     update: (verbose=false) ->
         @update_percepts()
         action = @agent_program @percepts
-        {location: {x, y}, dirt} = @percepts[@percepts.length - 1]
 
         if verbose
-            console.info "ReflexAgent #{@name}, percepts: x=#{x}, y=#{y}, dirt=#{dirt} => action: #{action}"
+            console.info "ReflexAgent #{@name}, action: #{action}"
         action
 
 
@@ -149,15 +148,26 @@ room = new Environment 'my room', 5, 5
 
 reemba = new ReflexAgent 'reemba', (percepts) ->
 
-    actions = [
-        ['move', 'left']
-        ['move', 'right']
-        ['move', 'up']
-        ['move', 'down']
-    ]
+    moves = ['up', 'down', 'left', 'right']
 
-    i = Math.floor(Math.random() * 100) % actions.length
-    actions[i]
+    {location: {x, y}, dirt} = percepts[percepts.length - 1]
+
+    console.log 'percepts', x, y, dirt
+    if dirt is 'dirt'
+        ['suck', '']
+    else
+        if x is 1
+            moves = moves.filter (el) -> el isnt 'left'
+        if x is 3
+            moves = moves.filter (el) -> el isnt 'right'
+        if y is 1
+            moves = moves.filter (el) -> el isnt 'up'
+        if y is 3
+            moves = moves.filter (el) -> el isnt 'down'
+        i = Math.floor(Math.random() * 100) % moves.length
+        action = ['move', moves[i]]
+        console.log action
+        action
 
 reemba.set_sensors
     dirt: room.get_dirt_sensor reemba
@@ -166,8 +176,8 @@ reemba.set_sensors
 
 dirt = new Dirt 'dirt'
 
-room.add_thing reemba, 0, 0
-room.add_thing dirt, 1, 0
+room.add_thing reemba, 1, 1
+room.add_thing dirt, 2, 2
 
 #
 # User prompt

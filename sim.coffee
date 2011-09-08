@@ -47,7 +47,7 @@ class Environment
 
 
     get_location_sensor: (agent) ->
-        ->
+        =>
             @get_coords agent
 
     get_dirt_sensor: (agent) ->

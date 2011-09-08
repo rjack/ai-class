@@ -26,7 +26,7 @@ class Environment
 
 
     add_thing: (thing, x, y) ->
-        thing.id = @generate_id()
+        thing.id ?= @generate_id()
         if (x < 0 || x >= @width || y < 0 || y >= @height)
             throw "add_thing error: #{thing} coordinates (#{x},#{y}) out of
  bounds (width = #{@width}, height = #{@height})"

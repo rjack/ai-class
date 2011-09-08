@@ -45,6 +45,9 @@ class Environment
         @cells[x][y] = @cells[x][y].filter (something) ->
             something.id isnt thing.id
 
+    obstacle_at: (x, y) ->
+        @cells[x][y].some (thing) -> thing instanceof Obstacle
+
 
     get_location_sensor: (agent) ->
         =>
@@ -57,6 +60,20 @@ class Environment
                 'dirt'
             else
                 'clean'
+
+    get_obstacle_sensor: (agent) ->
+        =>
+            [x, y] = @get_coords agent
+            obstacles = []
+            if @obstacle_at x + 1, y
+                obstacles.push 'right'
+            if @obstacle_at x - 1, y
+                obstacles.push 'left'
+            if @obstacle_at x, y + 1
+                obstacles.push 'down'
+            if @obstacle_at x, y - 1
+                obstacles.push 'up'
+            obstacles
 
     update: (verbose=false) ->
         @step++

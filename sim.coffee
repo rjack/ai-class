@@ -1,3 +1,30 @@
+# TODO: events
+#
+# Some ideas:
+#
+# * Agents and Environments can interact by means of events
+# * something happens: this is an event
+# * a sensor is a device that can perceive that something has happened
+# * an agent can read a sensor, so a sensor can be implemented as a
+#   ReadableStream
+# * each 'data' event is something a sensor perceived
+# * so, Environment trigger events on Sensors and Sensors trigger 'data'
+#   events on themselves.
+# * an actuator is something an agent can write commands to.
+# * so implementing an actuator as a WritableStream makes sense
+# * Environment listens for 'data' events on actuators, and modifies its state
+#   accordingly
+
+# Problems:
+# * more difficult to program?
+# * bye bye stack traces?
+# * performances?
+
+# Awesomeness:
+# * reflects real world
+# * true incapsulation: agent programs just listen for sensor 'data' events
+# * distributed?
+
 util = require 'util'
 rl = require('readline').createInterface process.stdin, process.stdout
 

@@ -14,6 +14,8 @@
 #   {
 #      "move": "right"
 #   }
+#   FIXME: what Environment does if Agents write more than one actuator inside
+#   a message?
 # * The Sensor/Actuator interface dictates what to write in these messages.
 # * If Sensors and Actuators implement node's Stream interface, good things
 #   can happen with Express/Connect WebSocket implementation :)

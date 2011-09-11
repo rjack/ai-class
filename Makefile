@@ -1,7 +1,7 @@
 CC=coffee
 CFLAGS=-b
 SRC=$(wildcard *.coffee)
-OBJ=sim.js
+OBJ=sim.js event-based.js
 
 .PHONY: all clean
 

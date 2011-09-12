@@ -1,112 +1,154 @@
 events = require 'events'
 
-class Sensor extends events.EventEmitter
 
-    constructor: (@agentID) ->
-        super()
+class Thing
 
-    write: (data) ->
-        data.id = @agentID
-        @emit 'data', data
+    constructor: (config) ->
 
-class Actuator extends events.EventEmitter
-
-    constructor: (@agentID) ->
-        super()
-
-    write: (data) ->
-        data.id = @agentID
-        @emit 'data', data
+    step: ->
 
 
-class Agent
+class Agent extends Thing
 
-    constructor: (@id, @sensor, @actuator, @program) ->
-        @program @sensor, @actuator
+    constructor: (config) ->
+        {@sensors, @actuators, @program} = config
+        for type, sensor of @sensors
+            sensor.setAgent this
+        @sensorEmitter = new events.EventEmitter
+        @actuatorsEmitter = new events.EventEmitter
+        @program @sensorEmitter, @actuatorsEmitter
+        super config
+
+    step: ->
+        @sense()
+
+    sense: ->
+        data = {}
+        for type, sensor of @sensors
+            data[type] = sensor.read()
+        @sensorEmitter.emit 'data', data
 
 
-    writeSensor: ->
+class Reemba extends Agent
+
+
+class Dirt extends Thing
+
+    constructor: ->
+        @difficult = 1
+
+    step: ->
+        # After each step dirt becomes more difficult to remove
+        @difficult++
+
+
+class Wall extends Thing
+
+
+class Sensor extends Thing
+
+    constructor: (@env) ->
+        @age = 0
+
+    setAgent: (@agent) ->
+
+    read: ->
+        throw 'NOT IMPLEMENTED'
+
+    step: ->
+        @age++
+        # TODO sensors can break with age :)
 
 
 
-class ReembaAgent extends Agent
-    # Sensor Interface:
-    #   location: {x, y}
-    #   obstacles: ['left', 'right', 'up', 'down']
-    #   dirt: true/false
-    #
-    # Actuator Interface:
-    #   id: agent_id
-    #   move: 'up' or 'down' or 'left' or 'right'
-    #   clean: true or false
+class LocationSensor extends Sensor
+
+    read: ->
+        @env.read @agent, 'location'
+
+
+class DirtSensor extends Sensor
+
+    read: ->
+        @env.read @agent, 'dirt'
+
+
+class Actuator extends Thing
+
+class MoveActuator extends Actuator
+
+class CleanActuator extends Actuator
 
 
 class Environment
 
     constructor: ->
-        @next_id = 0
-        @agents = {}
+        @id = 0
         @things = {}
 
-    handleActuator: (data) ->
-        console.log data
-        agent = @agents[data.id]
-        if data.move?
-            console.log "Moving agent #{data.id} #{data.move}"
-        else if data.clean? and data.clean
-            console.log "Agent #{data.id} cleans"
+    read: (who, what) ->
+        prop = @things[who.id][what]
+        if typeof prop is 'function'
+            prop who  # TODO: for example, 'dirt' must be computed
+        else
+            prop
 
-
-    spawnAgent: (type, program) ->
-        # Create agent properties
-        id = @next_id++
-        actuator = new Actuator id
-        sensor = new Sensor id
-        # TODO: x, y, ...
-
-        # Little agent factory
-        agent = switch type
-            when 'ReembaAgent'
-                new ReembaAgent id, sensor, actuator, program
-            else
-                throw "E0001 UNSUPPORTED AGENT: #{type}"
-
-        # Save agen
-        @agents[id] = agent
-
-        # Environment listens for data from agent's actuator
-        actuator.on 'data', (data) => @handleActuator data
-
-        # Kickstart agent giving its sensor something to chew
-        agent.writeSensor()
-
+    add: (thing, properties) ->
+        id = @id++
+        @things[id] = {}
+        for prop, value of properties
+            @things[id][prop] = value
+        @things[id].thing = thing
 
     step: ->
-        for id, agent of @agents
-            agent.writeSensor()
+        for id, thing of @things
+            thing.thing.step()
+        null
+
+class Room extends Environment
 
 
 
-room = new Environment
+myProgram = (sensors, actuators) ->
+
+    # Agent program persistence
+    percepts = []
+
+    sensors.on 'data', (data) ->
+        percepts.push data
+
+        # make decision based on percepts
+
+        # then act!
+        actuators.emit move: 'down'
+        #actuators.emit clean: true
 
 
-drunkReembaProgram = (sensor, actuator) ->
-    sensor.on 'data', (data) ->
-        all_directions = ['up', 'down', 'left', 'right']
-        {
-            location: { x, y },
-            dirt,
-            obstacles
-        } = data
+room = new Room width: 10, height: 10
 
-        if dirt is true
-            actuator.write clean: true
-        else
-            directions = all_directions.filter (el) -> not (el in obstacles)
-            i = Math.floor(Math.random() * 100) % directions.length
-            direction = directions[i]
-            actuator.write move: direction
+locationSensor = new LocationSensor room
+dirtSensor = new DirtSensor room
+
+moveActuator = new MoveActuator room
+cleanActuator = new CleanActuator room
 
 
-room.spawnAgent 'ReembaAgent', drunkReembaProgram
-room.spawnAgent 'ReembaAgent', drunkReembaProgram
+reemba = new Reemba
+    sensors:
+        location: locationSensor
+        dirt: dirtSensor
+    actuators:
+        move: moveActuator
+        clean: cleanActuator
+    program: myProgram
+
+
+dirt = new Dirt
+
+
+room.add reemba, x: 0, y: 0
+room.add dirt, x:1, y: 1
+
+
+for i in [1..10]
+    room.step()

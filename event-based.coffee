@@ -48,19 +48,25 @@ class Environment
         console.log data
 
     spawnAgent: (type, program) ->
+        # Create agent properties
         id = @next_id++
         actuator = new Actuator id
         sensor = new Sensor id
+
+        # Little agent factory
         agent = switch type
             when 'ReembaAgent'
                 new ReembaAgent id, sensor, actuator, program
             else
                 throw "E0001 UNSUPPORTED AGENT: #{type}"
 
+        # Save agen
         @agents[id] = agent
 
+        # Environment listens for data from agent's actuator
         actuator.on 'data', (data) => @handleActuator data
 
+        # Kickstart agent giving its sensor something to chew
         sensor.write location:
                 x: 0
                 y: 0

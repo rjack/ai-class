@@ -25,6 +25,10 @@ class Agent
         @program @sensor, @actuator
 
 
+    writeSensor: ->
+
+
+
 class ReembaAgent extends Agent
     # Sensor Interface:
     #   location: {x, y}
@@ -46,12 +50,19 @@ class Environment
 
     handleActuator: (data) ->
         console.log data
+        agent = @agents[data.id]
+        if data.move?
+            console.log "Moving agent #{data.id} #{data.move}"
+        else if data.clean? and data.clean
+            console.log "Agent #{data.id} cleans"
+
 
     spawnAgent: (type, program) ->
         # Create agent properties
         id = @next_id++
         actuator = new Actuator id
         sensor = new Sensor id
+        # TODO: x, y, ...
 
         # Little agent factory
         agent = switch type
@@ -67,11 +78,13 @@ class Environment
         actuator.on 'data', (data) => @handleActuator data
 
         # Kickstart agent giving its sensor something to chew
-        sensor.write location:
-                x: 0
-                y: 0
-            obstacles: []
-            dirt: false
+        agent.writeSensor()
+
+
+    step: ->
+        for id, agent of @agents
+            agent.writeSensor()
+
 
 
 room = new Environment
@@ -91,8 +104,8 @@ drunkReembaProgram = (sensor, actuator) ->
         else
             directions = all_directions.filter (el) -> not (el in obstacles)
             i = Math.floor(Math.random() * 100) % directions.length
-            action = directions[i]
-            actuator.write motor: action
+            direction = directions[i]
+            actuator.write move: direction
 
 
 room.spawnAgent 'ReembaAgent', drunkReembaProgram

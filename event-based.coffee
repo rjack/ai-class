@@ -72,6 +72,11 @@ class DirtSensor extends Sensor
     read: ->
         @env.read @agent, 'dirt'
 
+class NegativeDirtSensor extends DirtSensor
+
+    read: ->
+        -1 * super()
+
 
 class Actuator extends Thing
 
@@ -86,15 +91,23 @@ class Environment
         @id = 0
         @things = {}
 
+    read_dirt: (agent) ->
+        {id} = agent
+        {x, y} = @things[id]
+        # TODO: check grid[x][y] for Dirt Things
+        Math.floor (Math.random() * 100)
+
     read: (who, what) ->
-        prop = @things[who.id][what]
-        if typeof prop is 'function'
-            prop who  # TODO: for example, 'dirt' must be computed
-        else
-            prop
+        #debugger
+        switch what
+            when 'dirt'
+                @read_dirt who
+            else
+                @things[who.id][what]
 
     add: (thing, properties) ->
-        id = @id++
+        id = "id-#{@id++}"
+        thing.id = id
         @things[id] = {}
         for prop, value of properties
             @things[id][prop] = value
@@ -115,7 +128,10 @@ myProgram = (sensors, actuators) ->
     percepts = []
 
     sensors.on 'data', (data) ->
+        #debugger
         percepts.push data
+
+        console.log data
 
         # make decision based on percepts
 
@@ -126,28 +142,41 @@ myProgram = (sensors, actuators) ->
 
 room = new Room width: 10, height: 10
 
-locationSensor = new LocationSensor room
-dirtSensor = new DirtSensor room
-
-moveActuator = new MoveActuator room
-cleanActuator = new CleanActuator room
-
-
-reemba = new Reemba
+reemba_A = new Reemba
     sensors:
-        location: locationSensor
-        dirt: dirtSensor
+        location: new LocationSensor room
+        dirt: new DirtSensor room
     actuators:
-        move: moveActuator
-        clean: cleanActuator
+        move: new MoveActuator room
+        clean: new CleanActuator room
     program: myProgram
+
+
+reemba_B = new Reemba
+    sensors:
+        location: new LocationSensor room
+        dirt: new NegativeDirtSensor room
+    actuators:
+        move: new MoveActuator room
+        clean: new CleanActuator room
+    program: myProgram
+
 
 
 dirt = new Dirt
 
 
-room.add reemba, x: 0, y: 0
-room.add dirt, x:1, y: 1
+room.add reemba_A,
+    location:
+        x: 0, y: 0
+
+room.add reemba_B,
+    location:
+        x: 1, y: 1
+
+room.add dirt,
+    location:
+        x:1, y: 1
 
 
 for i in [1..10]

@@ -47,7 +47,7 @@ class Wall extends Thing
 
 class Sensor extends Thing
 
-    constructor: (@env) ->
+    constructor: (@envMan) ->
         @age = 0
 
     setAgent: (@agent) ->
@@ -64,41 +64,41 @@ class Sensor extends Thing
 class LocationSensor extends Sensor
 
     read: ->
-        @env.read @agent, 'location'
+        @envMan.read @agent, 'location'
 
 
 class DirtSensor extends Sensor
 
     read: ->
-        @env.read @agent, 'dirt'
+        @envMan.read @agent, 'dirt'
 
 class NegativeDirtSensor extends DirtSensor
 
     read: ->
-        -1 * super()
+       not super()
 
 
 class Actuator extends Thing
 
 class MoveActuator extends Actuator
 
+
 class CleanActuator extends Actuator
 
 
-class Environment
+class EnvironmentManager
 
-    constructor: ->
+    constructor: (@env) ->
         @id = 0
         @things = {}
 
     read_dirt: (agent) ->
         {id} = agent
-        {x, y} = @things[id]
-        # TODO: check grid[x][y] for Dirt Things
-        Math.floor (Math.random() * 100)
+        {location: {x, y}} = @things[id]
+        # check x, y for Dirt Things
+        (@env.get x, y).some (thing) -> thing instanceof Dirt
 
     read: (who, what) ->
-        #debugger
         switch what
             when 'dirt'
                 @read_dirt who
@@ -112,14 +112,33 @@ class Environment
         for prop, value of properties
             @things[id][prop] = value
         @things[id].thing = thing
+        if properties.location?
+            @env.add thing, properties.location
 
     step: ->
         for id, thing of @things
             thing.thing.step()
         null
 
-class Room extends Environment
 
+class Environment
+    constructor: (config) ->
+        # 2D grid for now
+        {@width, @height} = config
+        # grid as multidimensional array
+        @grid = for x in [0..@width-1]
+            for y in [0..@height-1]
+                []
+
+    add: (thing, location) ->
+        {x, y} = location
+        @grid[x][y].push thing
+
+    get: (x, y) ->
+        @grid[x][y]
+
+    set: (x, y, fn) ->
+        @grid[x][y] = fn @grid[x][y]
 
 
 myProgram = (sensors, actuators) ->
@@ -128,7 +147,6 @@ myProgram = (sensors, actuators) ->
     percepts = []
 
     sensors.on 'data', (data) ->
-        #debugger
         percepts.push data
 
         console.log data
@@ -140,25 +158,26 @@ myProgram = (sensors, actuators) ->
         #actuators.emit clean: true
 
 
-room = new Room width: 10, height: 10
+room = new Environment width: 10, height: 10
+master = new EnvironmentManager room
 
 reemba_A = new Reemba
     sensors:
-        location: new LocationSensor room
-        dirt: new DirtSensor room
+        location: new LocationSensor master
+        dirt: new DirtSensor master
     actuators:
-        move: new MoveActuator room
-        clean: new CleanActuator room
+        move: new MoveActuator master
+        clean: new CleanActuator master
     program: myProgram
 
 
 reemba_B = new Reemba
     sensors:
-        location: new LocationSensor room
-        dirt: new NegativeDirtSensor room
+        location: new LocationSensor master
+        dirt: new DirtSensor master
     actuators:
-        move: new MoveActuator room
-        clean: new CleanActuator room
+        move: new MoveActuator master
+        clean: new CleanActuator master
     program: myProgram
 
 
@@ -166,18 +185,19 @@ reemba_B = new Reemba
 dirt = new Dirt
 
 
-room.add reemba_A,
+master.add reemba_A,
     location:
         x: 0, y: 0
 
-room.add reemba_B,
+master.add reemba_B,
     location:
         x: 1, y: 1
 
-room.add dirt,
+master.add dirt,
     location:
         x:1, y: 1
 
+console.log room.grid
 
 for i in [1..10]
-    room.step()
+    master.step()

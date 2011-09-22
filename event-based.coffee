@@ -89,7 +89,6 @@ class CleanActuator extends Actuator
 class EnvironmentManager
 
     constructor: (@env) ->
-        @id = 0
         @things = {}
 
     read_dirt: (agent) ->
@@ -106,8 +105,7 @@ class EnvironmentManager
                 @things[who.id][what]
 
     add: (thing, properties) ->
-        id = "id-#{@id++}"
-        thing.id = id
+        is = thing.id
         @things[id] = {}
         for prop, value of properties
             @things[id][prop] = value

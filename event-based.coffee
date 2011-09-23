@@ -2,8 +2,11 @@ events = require 'events'
 
 
 class Thing
-
+    @ids = {}
     constructor: (config) ->
+        @constructor.ids[@constructor.name] ?= 0
+        @type = @constructor.name
+        @id = "#{@type}-#{@constructor.ids[@type]++}"
 
     step: ->
 
@@ -16,8 +19,8 @@ class Agent extends Thing
             sensor.setAgent this
         @sensorEmitter = new events.EventEmitter
         @actuatorsEmitter = new events.EventEmitter
-        @program @sensorEmitter, @actuatorsEmitter
         super config
+        @program @id, @sensorEmitter, @actuatorsEmitter
 
     step: ->
         @sense()
@@ -105,7 +108,7 @@ class EnvironmentManager
                 @things[who.id][what]
 
     add: (thing, properties) ->
-        is = thing.id
+        id = thing.id
         @things[id] = {}
         for prop, value of properties
             @things[id][prop] = value
@@ -139,7 +142,7 @@ class Environment
         @grid[x][y] = fn @grid[x][y]
 
 
-myProgram = (sensors, actuators) ->
+myProgram = (id, sensors, actuators) ->
 
     # Agent program persistence
     percepts = []
@@ -147,7 +150,7 @@ myProgram = (sensors, actuators) ->
     sensors.on 'data', (data) ->
         percepts.push data
 
-        console.log data
+        console.log id, data
 
         # make decision based on percepts
 

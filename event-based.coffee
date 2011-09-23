@@ -8,6 +8,9 @@ class Thing
         @type = @constructor.name
         @id = "#{@type}-#{@constructor.ids[@type]++}"
 
+        for prop, value of properties
+            @things[id][prop] = value
+
     step: ->
 
 
@@ -50,7 +53,7 @@ class Wall extends Thing
 
 class Sensor extends Thing
 
-    constructor: (@envMan) ->
+    constructor: (@em) ->
         @age = 0
 
     setAgent: (@agent) ->
@@ -67,13 +70,13 @@ class Sensor extends Thing
 class LocationSensor extends Sensor
 
     read: ->
-        @envMan.read @agent, 'location'
+        @em.read @agent, 'location'
 
 
 class DirtSensor extends Sensor
 
     read: ->
-        @envMan.read @agent, 'dirt'
+        @em.read @agent, 'dirt'
 
 class NegativeDirtSensor extends DirtSensor
 
@@ -107,14 +110,10 @@ class EnvironmentManager
             else
                 @things[who.id][what]
 
-    add: (thing, properties) ->
+    add: (thing) ->
         id = thing.id
         @things[id] = {}
-        for prop, value of properties
-            @things[id][prop] = value
-        @things[id].thing = thing
-        if properties.location?
-            @env.add thing, properties.location
+        @env.add thing
 
     step: ->
         for id, thing of @things
@@ -124,15 +123,14 @@ class EnvironmentManager
 
 class Environment
     constructor: (config) ->
-        # 2D grid for now
         {@width, @height} = config
         # grid as multidimensional array
         @grid = for x in [0..@width-1]
             for y in [0..@height-1]
                 []
 
-    add: (thing, location) ->
-        {x, y} = location
+    add: (thing) ->
+        {location: {x, y}} = location
         @grid[x][y].push thing
 
     get: (x, y) ->
@@ -170,6 +168,8 @@ reemba_A = new Reemba
         move: new MoveActuator master
         clean: new CleanActuator master
     program: myProgram
+    location:
+        x: 0, y: 0
 
 
 reemba_B = new Reemba
@@ -180,23 +180,19 @@ reemba_B = new Reemba
         move: new MoveActuator master
         clean: new CleanActuator master
     program: myProgram
+    location:
+        x: 1, y: 1
 
 
 
 dirt = new Dirt
-
-
-master.add reemba_A,
-    location:
-        x: 0, y: 0
-
-master.add reemba_B,
-    location:
-        x: 1, y: 1
-
-master.add dirt,
     location:
         x:1, y: 1
+
+
+master.add reemba_A
+master.add reemba_B
+master.add dirt
 
 console.log room.grid
 

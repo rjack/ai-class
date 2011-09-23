@@ -1,38 +1,45 @@
 events = require 'events'
 
+PERCEPTS =
+    location:
+        x: 'x coordinate'
+        y: 'y coordinate'
+    dirt: 'true or false'
+    obstacles: 'array of ACTION.MOVE fields'
+
+ACTIONS =
+    MOVE:
+        LEFT: 'LEFT'
+        RIGHT: 'RIGHT'
+        UP: 'UP'
+        DOWN: 'DOWN'
+    CLEAN:
+        SUCK: 'SUCK'
+
 
 class Thing
     @ids = {}
-    constructor: (config) ->
+    constructor: (config = properties: {}) ->
         @constructor.ids[@constructor.name] ?= 0
         @type = @constructor.name
         @id = "#{@type}-#{@constructor.ids[@type]++}"
 
-        for prop, value of properties
-            @things[id][prop] = value
+        {@properties} = config
 
     step: ->
+        null
 
 
 class Agent extends Thing
 
     constructor: (config) ->
-        {@sensors, @actuators, @program} = config
-        for type, sensor of @sensors
-            sensor.setAgent this
-        @sensorEmitter = new events.EventEmitter
-        @actuatorsEmitter = new events.EventEmitter
         super config
-        @program @id, @sensorEmitter, @actuatorsEmitter
+        {@sensors, @program} = config
+        @program = @program()
 
     step: ->
-        @sense()
-
-    sense: ->
-        data = {}
-        for type, sensor of @sensors
-            data[type] = sensor.read()
-        @sensorEmitter.emit 'data', data
+        super()
+        @program @properties
 
 
 class Reemba extends Agent
@@ -40,12 +47,14 @@ class Reemba extends Agent
 
 class Dirt extends Thing
 
-    constructor: ->
+    constructor: (config) ->
+        super(config)
         @difficult = 1
 
     step: ->
-        # After each step dirt becomes more difficult to remove
-        @difficult++
+        super()
+        @difficult++     # now it's more difficult to remove
+        null
 
 
 class Wall extends Thing
@@ -53,43 +62,29 @@ class Wall extends Thing
 
 class Sensor extends Thing
 
-    constructor: (@em) ->
-        @age = 0
-
-    setAgent: (@agent) ->
-
-    read: ->
+    read: (thing, env) ->
         throw 'NOT IMPLEMENTED'
-
-    step: ->
-        @age++
-        # TODO sensors can break with age :)
 
 
 
 class LocationSensor extends Sensor
 
-    read: ->
-        @em.read @agent, 'location'
+    read: (thing, env)->
+        thing.properties.location
 
 
 class DirtSensor extends Sensor
 
-    read: ->
-        @em.read @agent, 'dirt'
+    read: (thing, env)->
+        {properties: location: {x, y}} = thing
+        things = env.get x, y
+        things.some (something) ->
+            something instanceof Dirt
 
 class NegativeDirtSensor extends DirtSensor
 
-    read: ->
+    read: (thing, env)->
        not super()
-
-
-class Actuator extends Thing
-
-class MoveActuator extends Actuator
-
-
-class CleanActuator extends Actuator
 
 
 class EnvironmentManager
@@ -97,28 +92,55 @@ class EnvironmentManager
     constructor: (@env) ->
         @things = {}
 
-    read_dirt: (agent) ->
-        {id} = agent
-        {location: {x, y}} = @things[id]
-        # check x, y for Dirt Things
-        (@env.get x, y).some (thing) -> thing instanceof Dirt
-
-    read: (who, what) ->
-        switch what
-            when 'dirt'
-                @read_dirt who
-            else
-                @things[who.id][what]
-
     add: (thing) ->
         id = thing.id
-        @things[id] = {}
+        @things[id] = thing
         @env.add thing
+
+    remove: (thing) ->
+        {id} = thing
+        @env.remove thing
+        delete @things[id]
+        null
+
+    move: (thing, direction) ->
+        @env.remove thing
+        {location} = thing.properties
+        switch direction
+            when ACTIONS.MOVE.LEFT then location.x--
+            when ACTIONS.MOVE.RIGHT then location.x++
+            when ACTIONS.MOVE.UP then location.y--
+            when ACTIONS.MOVE.DOWN then location.y++
+            else
+                throw "INVALID DIRECTION #{direction}"
+        @env.add thing
+
+    clean: (agent) ->
+        {x, y} = agent.properties.location
+        dirt_things = @env.get(x, y).filter (something) =>
+            something instanceof Dirt
+        while dirt_things.length
+            @remove dirt_things.pop()
 
     step: ->
         for id, thing of @things
-            thing.thing.step()
+            # ok, qui devo chiamare i sensor della thing e settare le
+            # properties a seconda di quello che ritornano
+
+            if thing instanceof Agent
+                {sensors} = thing
+                for name, sensor of sensors
+                    thing.properties[name] = sensor.read thing, @env
+
+            action = thing.step()
+            if action of ACTIONS.MOVE
+                @move thing, action
+            else if action of ACTIONS.CLEAN
+                @clean thing
+            else if action isnt null
+                throw "INVALID ACTION #{action}"
         null
+
 
 
 class Environment
@@ -130,8 +152,13 @@ class Environment
                 []
 
     add: (thing) ->
-        {location: {x, y}} = location
+        {properties: location: {x, y}} = thing
         @grid[x][y].push thing
+
+    remove: (thing) ->
+        {properties: location: {x, y}} = thing
+        @grid[x][y] = @grid[x][y].filter (something) ->
+            something.id isnt thing.id
 
     get: (x, y) ->
         @grid[x][y]
@@ -140,21 +167,30 @@ class Environment
         @grid[x][y] = fn @grid[x][y]
 
 
-myProgram = (id, sensors, actuators) ->
 
-    # Agent program persistence
-    percepts = []
+myProgram =  ->
 
-    sensors.on 'data', (data) ->
-        percepts.push data
+    moves = for key, value of ACTIONS.MOVE
+        value
 
-        console.log id, data
+    (percepts) ->
+        {
+            location: {x, y},
+            dirt,
+            obstacles     # TODO
+        } = percepts
 
-        # make decision based on percepts
+        console.dir percepts
 
-        # then act!
-        actuators.emit move: 'down'
-        #actuators.emit clean: true
+        if dirt
+            action = ACTIONS.CLEAN.SUCK
+        else
+            possible_moves = moves.filter (el) -> not (el in obstacles)
+            i = Math.floor(Math.random() * 100) % possible_moves.length
+            action = ACTIONS.MOVE.DOWN
+
+        console.dir action
+        action
 
 
 room = new Environment width: 10, height: 10
@@ -162,32 +198,29 @@ master = new EnvironmentManager room
 
 reemba_A = new Reemba
     sensors:
-        location: new LocationSensor master
-        dirt: new DirtSensor master
-    actuators:
-        move: new MoveActuator master
-        clean: new CleanActuator master
+        location: new LocationSensor
+        dirt: new DirtSensor
     program: myProgram
-    location:
-        x: 0, y: 0
+    properties:
+        location:
+            x: 0, y: 0
 
 
 reemba_B = new Reemba
     sensors:
-        location: new LocationSensor master
-        dirt: new DirtSensor master
-    actuators:
-        move: new MoveActuator master
-        clean: new CleanActuator master
+        location: new LocationSensor
+        dirt: new DirtSensor
     program: myProgram
-    location:
-        x: 1, y: 1
+    properties:
+        location:
+            x: 1, y: 1
 
 
 
 dirt = new Dirt
-    location:
-        x:1, y: 1
+    properties:
+        location:
+            x:1, y: 1
 
 
 master.add reemba_A
@@ -196,5 +229,5 @@ master.add dirt
 
 console.log room.grid
 
-for i in [1..10]
+for i in [1..5]
     master.step()

@@ -1,5 +1,6 @@
 events = require 'events'
 
+
 PERCEPTS =
     location:
         x: 'x coordinate'
@@ -29,6 +30,9 @@ class Thing
     step: ->
         null
 
+    toString: ->
+        '?'
+
 
 class Agent extends Thing
 
@@ -43,6 +47,8 @@ class Agent extends Thing
 
 
 class Reemba extends Agent
+
+    @blocks = true
 
 
 class Dirt extends Thing
@@ -59,6 +65,8 @@ class Dirt extends Thing
 
 class Wall extends Thing
 
+    @blocks = true
+
 
 class Sensor extends Thing
 
@@ -69,22 +77,44 @@ class Sensor extends Thing
 
 class LocationSensor extends Sensor
 
-    read: (thing, env)->
+    read: (thing, env) ->
         thing.properties.location
 
 
 class DirtSensor extends Sensor
 
-    read: (thing, env)->
+    read: (thing, env) ->
         {properties: location: {x, y}} = thing
         things = env.get x, y
         things.some (something) ->
             something instanceof Dirt
 
+
 class NegativeDirtSensor extends DirtSensor
 
     read: (thing, env)->
-       not super()
+        not super()
+
+
+class ObstacleSensor extends Sensor
+
+    obstacle_at: (env, x, y) ->
+        (env.get x, y).some (something) ->
+            'blocks' of something
+
+
+    read: (thing, env) ->
+        obstacles = []
+        {properties: location: {x, y}} = thing
+        if @obstacle_at env, x + 1, y
+            obstacles.push ACTIONS.MOVE.RIGHT
+        if @obstacle_at env, x - 1, y
+            obstacles.push ACTIONS.MOVE.LEFT
+        if @obstacle_at env, x, y + 1
+            obstacles.push ACTIONS.MOVE.DOWN
+        if @obstacle_at env, x, y - 1
+            obstacles.push ACTIONS.MOVE.UP
+        obstacles
 
 
 class EnvironmentManager
@@ -166,6 +196,12 @@ class Environment
     set: (x, y, fn) ->
         @grid[x][y] = fn @grid[x][y]
 
+    draw: ->
+        for x in [0..@width-1]
+            for y in [0..@height-1]
+                # TODO
+        null
+
 
 
 myProgram =  ->
@@ -187,47 +223,61 @@ myProgram =  ->
         else
             possible_moves = moves.filter (el) -> not (el in obstacles)
             i = Math.floor(Math.random() * 100) % possible_moves.length
-            action = ACTIONS.MOVE.DOWN
+            action = possible_moves[i]
 
         console.dir action
         action
 
 
-room = new Environment width: 10, height: 10
+width = 10
+height = 10
+room = new Environment width: width, height: height
 master = new EnvironmentManager room
+
 
 reemba_A = new Reemba
     sensors:
         location: new LocationSensor
         dirt: new DirtSensor
-    program: myProgram
-    properties:
-        location:
-            x: 0, y: 0
-
-
-reemba_B = new Reemba
-    sensors:
-        location: new LocationSensor
-        dirt: new DirtSensor
+        obstacles: new ObstacleSensor
     program: myProgram
     properties:
         location:
             x: 1, y: 1
 
 
+reemba_B = new Reemba
+    sensors:
+        location: new LocationSensor
+        dirt: new DirtSensor
+        obstacles: new ObstacleSensor
+    program: myProgram
+    properties:
+        location:
+            x: 8, y: 8
+
+
 
 dirt = new Dirt
     properties:
         location:
-            x:1, y: 1
+            x: 5, y: 5
 
+for x in [0..width-1]
+    for y in [0..height-1]
+        if x is 0 or x is width-1 or y is 0 or y is height-1
+            master.add new Wall
+                properties:
+                    location:
+                        x: x, y: y
 
 master.add reemba_A
 master.add reemba_B
 master.add dirt
 
-console.log room.grid
-
 for i in [1..5]
+    room.draw()
     master.step()
+
+
+room.draw()

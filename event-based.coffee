@@ -50,6 +50,9 @@ class Reemba extends Agent
 
     @blocks = true
 
+    toString: ->
+        'R'
+
 
 class Dirt extends Thing
 
@@ -62,10 +65,16 @@ class Dirt extends Thing
         @difficult++     # now it's more difficult to remove
         null
 
+    toString: ->
+        'D'
+
 
 class Wall extends Thing
 
     @blocks = true
+
+    toString: ->
+        'W'
 
 
 class Sensor extends Thing
@@ -197,9 +206,17 @@ class Environment
         @grid[x][y] = fn @grid[x][y]
 
     draw: ->
-        for x in [0..@width-1]
-            for y in [0..@height-1]
-                # TODO
+        rows = for y in [0..@height-1]
+            cells = for x in [0..@width-1]
+                symbols = for thing in @grid[x][y]
+                    thing.toString()
+                if symbols.length
+                    symbols.join ','
+                else
+                    ' '
+            cells.join '|'
+        drawing = rows.join '\n'
+        console.log drawing
         null
 
 

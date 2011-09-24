@@ -1,5 +1,7 @@
 events = require 'events'
 
+WIDTH = 30
+HEIGHT = 30
 
 PERCEPTS =
     location:
@@ -48,7 +50,7 @@ class Agent extends Thing
 
 class Reemba extends Agent
 
-    @blocks = true
+    blocks: true
 
     toString: ->
         'R'
@@ -71,7 +73,7 @@ class Dirt extends Thing
 
 class Wall extends Thing
 
-    @blocks = true
+    blocks: true
 
     toString: ->
         'W'
@@ -246,9 +248,7 @@ myProgram =  ->
         action
 
 
-width = 10
-height = 10
-room = new Environment width: width, height: height
+room = new Environment width: WIDTH, height: HEIGHT
 master = new EnvironmentManager room
 
 
@@ -271,18 +271,19 @@ reemba_B = new Reemba
     program: myProgram
     properties:
         location:
-            x: 8, y: 8
+            x: WIDTH-2, y: HEIGHT-2
 
 
 
 dirt = new Dirt
     properties:
         location:
-            x: 5, y: 5
+            x: Math.floor WIDTH/2
+            y: Math.floor HEIGHT/2
 
-for x in [0..width-1]
-    for y in [0..height-1]
-        if x is 0 or x is width-1 or y is 0 or y is height-1
+for x in [0..WIDTH-1]
+    for y in [0..HEIGHT-1]
+        if x is 0 or x is WIDTH-1 or y is 0 or y is HEIGHT-1
             master.add new Wall
                 properties:
                     location:
@@ -292,9 +293,8 @@ master.add reemba_A
 master.add reemba_B
 master.add dirt
 
-for i in [1..5]
+while dirt.id of master.things
     room.draw()
     master.step()
-
 
 room.draw()
